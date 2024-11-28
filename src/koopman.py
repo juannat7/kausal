@@ -21,8 +21,7 @@ def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42)):
     b = jax.random.uniform(key_b, shape=(M, D)) # Random biases
 
     # Compute RFF
-    Z = jnp.cos(jnp.dot(W.T, X) + b)
-    return Z
+    return jnp.cos(jnp.dot(W.T, X) + b)
 
 
 def dynamic_mode_decomposition(Psi, Psi_t):
@@ -47,41 +46,74 @@ def dynamic_mode_decomposition(Psi, Psi_t):
 
 def compute_causal_loss(cause, effect, t=1):
     """
-    Compute causal loss given the cause, effect data, and the time shift
-    
+    Compute causal loss for both causal and non-causal directions.
+
     Parameters:
-        cause: causing data states.
-        effect: effected data states.
+        cause: Causing data states.
+        effect: Effected data states.
 
     Returns:
-        model_error: computed based on the difference between marginal and joint errors.
-        omega_marginal: omega when considering only the effect (no cause)
-        omega_joint: omega when considering both the cause and effect
+        causal_model_error: Causal direction error.
+        non_causal_model_error: Non-causal direction error.
+        omega_marginal_causal, omega_joint_causal: Forecasts in causal direction.
+        omega_marginal_non_causal, omega_joint_non_causal: Forecasts in non-causal direction.
     """
+    N, D = cause.shape
+    cause_effect = jnp.concatenate([cause, effect], axis=0)
+
     # Generate the omega and its shifts
     omega_C, omega_C_t = cause[:, :-t], cause[:, t:]
     omega_E, omega_E_t = effect[:, :-t], effect[:, t:]
-    
-    # Compute their DMD transforms 
+    omega_CE, omega_CE_t = cause_effect[:, :-t], cause_effect[:, t:]
+
+    # Compute their DMD transforms
     psi_C, psi_C_t = random_fourier_features(omega_C), random_fourier_features(omega_C_t)
     psi_E, psi_E_t = random_fourier_features(omega_E), random_fourier_features(omega_E_t)
-    
-    # Derive Koopman operators, K_t
-    K_marginal = dynamic_mode_decomposition(
+    psi_CE, psi_CE_t = random_fourier_features(omega_CE), random_fourier_features(omega_CE_t)
+
+    # Step 1: Causal Direction (C -> E)
+
+    ## Compute K
+    K_marginal_causal = dynamic_mode_decomposition(
         jnp.concatenate([omega_E, psi_E], axis=0), omega_E_t
     )
-    
-    K_joint = dynamic_mode_decomposition(
-        jnp.concatenate([omega_E, psi_E, psi_C], axis=0), omega_E_t
+    K_joint_causal = dynamic_mode_decomposition(
+        jnp.concatenate([omega_E, psi_CE], axis=0), omega_CE_t
     )
 
-    # Project to the data space
-    omega_marginal = K_marginal @ jnp.concatenate([omega_E, psi_E], axis=0)
-    omega_joint = K_joint @ jnp.concatenate([omega_E, psi_E, psi_C], axis=0)
+    ## Compute marginal / joint
+    omega_marginal_causal = K_marginal_causal @ jnp.concatenate([omega_E, psi_E], axis=0)
+    omega_joint_causal = K_joint_causal @ jnp.concatenate([omega_E, psi_CE], axis=0)
 
-    # Compute causal loss
-    marginal_err = jnp.square(omega_marginal - omega_E_t).mean() 
-    joint_err = jnp.square(omega_joint - omega_E_t).mean() 
-    model_error = marginal_err - joint_err
-    
-    return model_error, omega_marginal, omega_joint
+    ## Compute errors
+    causal_err_marginal = jnp.square(omega_marginal_causal - omega_E_t).mean()
+    causal_err_joint = jnp.square(omega_joint_causal[:N] - omega_E_t).mean()
+    causal_model_error = causal_err_joint - causal_err_marginal
+
+    # Step 2: Non-Causal Direction (E -> C)
+
+    ## Compute K
+    K_marginal_non_causal = dynamic_mode_decomposition(
+        jnp.concatenate([omega_C, psi_C], axis=0), omega_C_t
+    )
+    K_joint_non_causal = dynamic_mode_decomposition(
+        jnp.concatenate([omega_C, psi_CE], axis=0), omega_CE_t
+    )
+
+    ## Compute marginal / joint
+    omega_marginal_non_causal = K_marginal_non_causal @ jnp.concatenate([omega_C, psi_C], axis=0)
+    omega_joint_non_causal = K_joint_non_causal @ jnp.concatenate([omega_C, psi_CE], axis=0)
+
+    ## Compute errors
+    non_causal_err_marginal = jnp.square(omega_marginal_non_causal - omega_C_t).mean()
+    non_causal_err_joint = jnp.square(omega_joint_non_causal[:N] - omega_C_t).mean()
+    non_causal_model_error = non_causal_err_joint - non_causal_err_marginal
+
+    return (
+        causal_model_error,
+        non_causal_model_error,
+        omega_marginal_causal,
+        omega_joint_causal,
+        omega_marginal_non_causal,
+        omega_joint_non_causal,
+    )
