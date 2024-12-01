@@ -1,7 +1,9 @@
+import numpy as np
 import jax
 import jax.numpy as jnp
+import pykoopman as pk
 
-def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42), identity=False):
+def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42)):
     """
     Generate Random Fourier Features for input data X 
         Reference: Equation 10
@@ -14,8 +16,6 @@ def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42), identity=False
     Returns:
         jax.numpy.ndarray: Transformed data of shape (M, D).
     """
-    if identity:
-        return X
         
     N, D = X.shape
     key_W, key_b = jax.random.split(key)
@@ -106,8 +106,8 @@ def compute_causal_loss(cause, effect, t=1):
     omega_joint = K_joint @ jnp.concatenate([omega_E, psi_EC], axis=0)
     
     # Compute errors
-    causal_err_marginal = jnp.sqrt(jnp.mean(jnp.square(omega_marginal - omega_Et)))
-    causal_err_joint = jnp.sqrt(jnp.mean(jnp.square(omega_joint - omega_Et)))
+    causal_err_marginal = jnp.mean(jnp.square(omega_marginal - omega_Et))
+    causal_err_joint = jnp.mean(jnp.square(omega_joint - omega_Et))
     causal_model_error = causal_err_marginal - causal_err_joint
 
     return (

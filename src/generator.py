@@ -26,4 +26,32 @@ def coupled_rossler(t, state, args):
     dz2 = b + z2 * (x2 - d)
 
     return jnp.array([dx1, dy1, dz1, dx2, dy2, dz2])
+
+
+def lorenz96(t, state, args):
+    """
+    Lorenz '96 model dynamics.
     
+    Parameters:
+        t: float
+            Current time (required by diffrax but not used in dynamics).
+        state: jnp.ndarray
+            Current state vector (N variables).
+        args: tuple
+            Extra arguments (e.g., forcing term F).
+
+    Returns:
+        dxdt: jnp.ndarray
+            Time derivative of the state vector.
+    """
+    F = args[0]  # Forcing term
+    N = state.shape[0]  # Number of variables
+
+    # Compute the derivatives with periodic boundary conditions
+    dxdt = (
+        (state[(jnp.arange(N) + 1) % N] - state[(jnp.arange(N) - 2) % N]) 
+        * state[(jnp.arange(N) - 1) % N]
+        - state
+        + F
+    )
+    return dxdt
