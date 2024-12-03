@@ -1,7 +1,7 @@
 import numpy as np
 import jax
 import jax.numpy as jnp
-import pykoopman as pk
+import equinox as eqx
 
 def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42)):
     """
@@ -16,7 +16,6 @@ def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42)):
     Returns:
         jax.numpy.ndarray: Transformed data of shape (M, D).
     """
-        
     N, D = X.shape
     key_W, key_b = jax.random.split(key)
 
@@ -25,6 +24,7 @@ def random_fourier_features(X, M=500, key=jax.random.PRNGKey(42)):
 
     # Compute RFF
     return jnp.sqrt(2 / M) * jnp.cos(jnp.dot(W.T, X) + b)
+
 
 
 def dynamic_mode_decomposition(Psi, Psi_t):
@@ -47,7 +47,7 @@ def dynamic_mode_decomposition(Psi, Psi_t):
     return K_t
 
 
-def compute_transforms(cause, effect, t=1):
+def compute_transforms(cause, effect, t=1, **kwargs):
     """Compute cause-effect transforms"""
     N, D = cause.shape
     
@@ -57,23 +57,23 @@ def compute_transforms(cause, effect, t=1):
     omega_E, omega_Et = effect[:, :-t], effect[:, t:]
     omega_EC, omega_ECt = effect_cause[:, :-t], effect_cause[:, t:]
 
-    # Compute their DMD transforms
-    psi_E, psi_Et = random_fourier_features(omega_E), random_fourier_features(omega_Et)
-    psi_EC, psi_ECt = random_fourier_features(omega_EC), random_fourier_features(omega_ECt)
+    # Retrieve transformation functions
+    marginal_transform_fn = kwargs.get("marginal_model", random_fourier_features)
+    joint_transform_fn = kwargs.get("joint_model", random_fourier_features)
+
+    # Compute their transforms
+    psi_E, psi_Et = marginal_transform_fn(omega_E), marginal_transform_fn(omega_Et)
+    psi_EC, psi_ECt = joint_transform_fn(omega_EC), joint_transform_fn(omega_ECt)
 
     return omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt
 
 
-
 def compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et):
     """Compute approximation to Koopman operator with DMD algorithm"""
-
-    # Compute marginal model
     K_marginal = dynamic_mode_decomposition(
         jnp.concatenate([omega_E, psi_E], axis=0), omega_Et
     )
 
-    # Compute joint model
     K_joint = dynamic_mode_decomposition(
         jnp.concatenate([omega_E, psi_EC], axis=0), omega_Et
     )
@@ -81,7 +81,7 @@ def compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et):
     return K_marginal, K_joint
 
 
-def compute_causal_loss(cause, effect, t=1):
+def compute_causal_loss(cause, effect, t=1, **kwargs):
     """
     Compute causal loss for both causal and non-causal directions.
 
@@ -95,13 +95,26 @@ def compute_causal_loss(cause, effect, t=1):
         omega_marginal: Marginal forecasts.
         omega_joint: Joint forecasts.
     """
-    # Compute transforms
-    omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(cause, effect, t)
+    marginal_model = kwargs.get("marginal_model", None)
+    joint_model = kwargs.get("joint_model", None)
 
-    # Compute K
+    # Transform
+    if (marginal_model == None) or (joint_model == None):
+
+        omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
+            cause, effect, t
+        )
+
+    else:
+        
+        omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
+            cause, effect, t, marginal_model=marginal_model.encoder, joint_model=joint_model.encoder
+        )
+        
+    # Compute DMD-based K
     K_marginal, K_joint = compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et)
-    
-    # Compute marginal / joint
+
+    # Evaluate omega
     omega_marginal = K_marginal @ jnp.concatenate([omega_E, psi_E], axis=0)
     omega_joint = K_joint @ jnp.concatenate([omega_E, psi_EC], axis=0)
     
@@ -115,3 +128,60 @@ def compute_causal_loss(cause, effect, t=1):
         omega_marginal,
         omega_joint
     )
+
+
+def conditional_forecasting(cause, effect, t=1, **kwargs):
+    """
+    Compute conditional forecasting by fitting K on a given training set, and iterating on a testing set
+    given previous data point as the conditioning input.
+    """
+    
+    effect_cause = jnp.concatenate([effect, cause], axis=0)
+    N_cause, N_effect = cause.shape[0], effect.shape[0]
+    D = cause.shape[1]
+
+    marginal_model = kwargs.get("marginal_model", None)
+    joint_model = kwargs.get("joint_model", None)
+
+    # Compute transforms
+    if (marginal_model == None) or (joint_model == None):
+        
+        omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
+            cause, effect, t
+        )
+
+        marginal_transform_fn = random_fourier_features
+        joint_transform_fn = random_fourier_features
+
+
+    else:
+        
+        omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
+            cause, effect, t, marginal_model=marginal_model.encoder, joint_model=joint_model.encoder
+        )
+
+        marginal_transform_fn = marginal_model.encoder
+        joint_transform_fn = joint_model.encoder
+
+    # Approximate K by psuedo-inverse method
+    K_marginal, K_joint = compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et)
+
+    # Compute marginal / joint on all data including test set
+    omega_marginal, omega_joint = [effect[:, 0:1]], [effect[:, 0:1]]
+    
+    for d in range(D - t):
+    
+        # Marginal
+        omega_marginal.append(
+            K_marginal @ jnp.concatenate([omega_marginal[-1], marginal_transform_fn(effect[:, d:d+1])], axis=0)
+        )
+    
+        # Joint
+        omega_joint.append(
+            K_joint @ jnp.concatenate([omega_joint[-1], joint_transform_fn(effect_cause[:, d:d+1])], axis=0)
+        )
+    
+    omega_marginal = jnp.array(omega_marginal).squeeze().T
+    omega_joint = jnp.array(omega_joint).squeeze().T
+
+    return omega_marginal, omega_joint
