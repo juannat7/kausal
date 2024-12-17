@@ -166,12 +166,13 @@ def conditional_forecasting(cause, effect, t=1, **kwargs):
 
     marginal_model = kwargs.get("marginal_model", None)
     joint_model = kwargs.get("joint_model", None)
+    n_train = kwargs.get("n_train", D)
 
     # Compute transforms
     if (marginal_model == None) or (joint_model == None):
         
         omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
-            cause, effect, t
+            cause[..., :n_train], effect[..., :n_train], t
         )
 
         marginal_transform_fn = random_fourier_features
@@ -181,7 +182,7 @@ def conditional_forecasting(cause, effect, t=1, **kwargs):
     else:
         
         omega_E, omega_Et, omega_EC, omega_ECt, psi_E, psi_Et, psi_EC, psi_ECt = compute_transforms(
-            cause, effect, t, marginal_model=marginal_model.encoder, joint_model=joint_model.encoder
+            cause[..., :n_train], effect[..., :n_train], t, marginal_model=marginal_model.encoder, joint_model=joint_model.encoder
         )
 
         if isinstance(marginal_model.encoder, CNNEncoder):
