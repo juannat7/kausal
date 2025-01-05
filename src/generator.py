@@ -1,15 +1,6 @@
-import abc
 import numpy as np
-import math
-import random
-import seaborn as sns
-import matplotlib.pyplot as plt
-from typing import *
-
-import jax
-import jax.numpy as jnp
-import jax.random as rng
-import jax_cfd.base as cfd
+import torch
+import torch.nn.functional as F
 
 def coupled_rossler(t, state, args):
     """
@@ -17,12 +8,12 @@ def coupled_rossler(t, state, args):
         Reference: Equation 1
 
     Parameters:
-        t: time
-        state: system state (6 variables / degree of freedom)
-        args: scalar parameters, including c1 c2 as the coupling terms
+        t: time.
+        state: system states (6 variables / degree of freedom).
+        args: scalar parameters, including c1 c2 as the coupling terms.
 
     Returns:
-        tendency: system state tendencies
+        tendency: system state tendencies.
     """
     x1, y1, z1, x2, y2, z2 = state
     phi1, phi2, a, b, d, c1, c2 = args
@@ -36,61 +27,62 @@ def coupled_rossler(t, state, args):
     dy2 = phi2 * x2 + a * y2 + c2 * (y1 - y2)
     dz2 = b + z2 * (x2 - d)
 
-    return jnp.array([dx1, dy1, dz1, dx2, dy2, dz2])
+    return torch.tensor([dx1, dy1, dz1, dx2, dy2, dz2])
 
 
 def lorenz96(t, state, args):
     """
     Lorenz '96 model dynamics.
-    
+
     Parameters:
-        t: float
-            Current time (required by diffrax but not used in dynamics).
-        state: jnp.ndarray
-            Current state vector (N variables).
-        args: tuple
-            Extra arguments (e.g., forcing term F).
+        t: time.
+        state: system states.
+        args: scalar parameters, including forcing term F.
 
     Returns:
-        dxdt: jnp.ndarray
-            Time derivative of the state vector.
+        tendency: system state tendencies.
     """
     F = args[0]  # Forcing term
     N = state.shape[0]  # Number of variables
 
     # Compute the derivatives with periodic boundary conditions
+    indices = torch.arange(N)
     dxdt = (
-        (state[(jnp.arange(N) + 1) % N] - state[(jnp.arange(N) - 2) % N]) 
-        * state[(jnp.arange(N) - 1) % N]
+        (state[(indices + 1) % N] - state[(indices - 2) % N])
+        * state[(indices - 1) % N]
         - state
         + F
     )
     return dxdt
-    
-def laplacian_2d(T, dx, dy):
-    T_padded = jnp.pad(T, pad_width=1, mode="edge")  # Neumann BC
-    laplacian_x = (T_padded[2:, 1:-1] - 2 * T_padded[1:-1, 1:-1] + T_padded[:-2, 1:-1]) / dx**2
-    laplacian_y = (T_padded[1:-1, 2:] - 2 * T_padded[1:-1, 1:-1] + T_padded[1:-1, :-2]) / dy**2
-    return laplacian_x + laplacian_y
+
 
 def reaction_diffusion_2d(t, state, args):
     """
     Coupled reaction-diffusion in 2D field
 
     Parameters:
-        t: time
+        t: time.
         state: system states.
         args: scalar parameters, including beta and gamma coupling terms.
 
     Returns:
-        tendency: system state tendencies
+        tendency: system state tendencies.
     """
+    
+    def _laplacian_2d(T, dx, dy):
+        """Helper function to compute 2D Laplacian"""
+        T_padded = F.pad(T.unsqueeze(0), pad=(1, 1, 1, 1), mode = "replicate").squeeze()  # Neumann BC
+        laplacian_x = (T_padded[2:, 1:-1] - 2 * T_padded[1:-1, 1:-1] + T_padded[:-2, 1:-1]) / dx**2
+        laplacian_y = (T_padded[1:-1, 2:] - 2 * T_padded[1:-1, 1:-1] + T_padded[1:-1, :-2]) / dy**2
+        return laplacian_x + laplacian_y
+    
     D_u, D_v, a, b, beta, gamma, Nx, Ny, dx, dy = args
-    u, v = state[:Nx * Ny].reshape((Nx, Ny)), state[Nx * Ny:].reshape((Nx, Ny))
+    u = state[:Nx * Ny].reshape((Nx, Ny))
+    v = state[Nx * Ny:].reshape((Nx, Ny))
 
     # Diffusion terms
-    laplacian_u = laplacian_2d(u, dx, dy)
-    laplacian_v = laplacian_2d(v, dx, dy)
+    laplacian_u = _laplacian_2d(u, dx, dy)
+    laplacian_v = _laplacian_2d(v, dx, dy)
 
     # Reaction terms with coupling
     f_u = -u * (u - a) * (u - 1) + beta * v
@@ -100,4 +92,4 @@ def reaction_diffusion_2d(t, state, args):
     du_dt = D_u * laplacian_u + f_u
     dv_dt = D_v * laplacian_v + f_v
 
-    return jnp.concatenate([du_dt.ravel(), dv_dt.ravel()])
+    return torch.cat([du_dt.ravel(), dv_dt.ravel()])
