@@ -2,26 +2,11 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from src.observables import RandomFourierFeatures
-from src.utils import (
+from .observables import RandomFourierFeatures
+from .regressors import MoorePenroseInverse
+from .utils import (
     validate
 )
-
-def dynamic_mode_decomposition(Psi, Psi_t):
-    """TODO(juan): refactor to a common regression class
-    Perform Dynamic Mode Decomposition (DMD).
-
-    Parameters:
-        Psi: Observables at current time.
-        Psi_t: Observables at shifted time.
-
-    Returns:
-        K_t: Koopman operator in the original space.
-    """
-    Psi_inverse = torch.linalg.pinv(Psi)
-    K_t = Psi_t @ Psi_inverse
-    return K_t
-
 
 def compute_transforms(cause, effect, t=1, **kwargs):
     """
@@ -62,8 +47,9 @@ def compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et):
     """
     Compute approximation to Koopman operator with regression algorithm (e.g., DMD)
     """
-    K_marginal = dynamic_mode_decomposition(torch.cat([omega_E, psi_E], axis=0), omega_Et)
-    K_joint = dynamic_mode_decomposition(torch.cat([omega_E, psi_EC], axis=0), omega_Et)
+    regressor = MoorePenroseInverse()
+    K_marginal = regressor(torch.cat([omega_E, psi_E], axis=0), omega_Et)
+    K_joint = regressor(torch.cat([omega_E, psi_EC], axis=0), omega_Et)
 
     return (
         K_marginal, K_joint

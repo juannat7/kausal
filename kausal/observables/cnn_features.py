@@ -41,11 +41,11 @@ class CNNFeatures(BaseObservables):
 
     def __init__(
         self,
-        in_channels=3,
-        hidden_channels=[16, 32],
-        out_channels=3,
-        activation='sigmoid',
-        random_seed=42
+        in_channels = 3,
+        hidden_channels = [16, 32],
+        out_channels = 3,
+        activation = 'sigmoid',
+        random_seed = 42
     ):
         super().__init__()
 
@@ -104,11 +104,11 @@ class CNNFeatures(BaseObservables):
 
     def fit(
         self,
-        x=None,
-        y=None,
-        epochs=1000,
-        lr=1e-3,
-        batch_size=32
+        x = None,
+        y = None,
+        epochs = 1000,
+        lr = 1e-3,
+        batch_size = 32
     ):
         """
         Train/fit model.
