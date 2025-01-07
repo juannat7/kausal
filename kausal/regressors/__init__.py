@@ -1,1 +1,2 @@
-from .pseudo_inverse import MoorePenroseInverse
+from .pinv import PINV
+from .dmd import DMD

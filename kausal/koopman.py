@@ -3,10 +3,8 @@ import torch
 import torch.nn.functional as F
 
 from .observables import RandomFourierFeatures
-from .regressors import MoorePenroseInverse
-from .utils import (
-    validate
-)
+from .regressors import PINV, DMD
+from .utils import validate
 
 def compute_transforms(cause, effect, t=1, **kwargs):
     """
@@ -47,7 +45,13 @@ def compute_K(omega_E, psi_E, omega_EC, psi_EC, omega_Et):
     """
     Compute approximation to Koopman operator with regression algorithm (e.g., DMD)
     """
-    regressor = MoorePenroseInverse()
+    # Initialize regressor e.g., DMD, MoorePenroseInverse
+    regressor = DMD(
+        svd_rank=None, 
+        tikhonov_regularization=1e-7
+    )
+
+    # Estimate Koopman operator for both marginal and joint models
     K_marginal = regressor(torch.cat([omega_E, psi_E], axis=0), omega_Et)
     K_joint = regressor(torch.cat([omega_E, psi_EC], axis=0), omega_Et)
 

@@ -2,15 +2,10 @@ import torch
 
 from .base import BaseRegressor
 
-class MoorePenroseInverse(BaseRegressor):
+class PINV(BaseRegressor):
     """
     Estimate Koopman Operator with MoorePenroseInverse method
         Reference: https://pytorch.org/docs/stable/generated/torch.linalg.pinv.html
-
-    Parameters:
-
-    Returns
-        K (torch.Tensor): The Koopman operator.
     """
 
     def __init__(self):
