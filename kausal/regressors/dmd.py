@@ -72,7 +72,7 @@ class DMD(BaseRegressor):
             U (torch.Tensor): Left singular vectors, shape (n_features, svd_rank).
             S_inv (torch.Tensor): Inverse of singular diagonal matrix.
             Vh (torch.Tensor): Right singular vectors, shape (svd_rank, n_features).
-            Wt (torch.Tensor): Prediction observables, shape (n_features, n_samples).
+            Wt (torch.Tensor): Prediction observables, shape (n_features, n_timestep).
 
         Returns:
             K (torch.Tensor): Estimated Koopman matrix in the full observable space.

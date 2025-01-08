@@ -26,6 +26,9 @@ class RandomFourierFeatures(BaseObservables):
         self.gamma = gamma
         self.random_seed = random_seed
 
+    def fit(self):
+        return self
+    
     def forward(
         self, 
         X

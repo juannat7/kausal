@@ -18,6 +18,13 @@ class BaseObservables(nn.Module):
     def validate(self, X):
         return validate(X)
 
+    
+    @abc.abstractmethod
+    def fit(self):
+        """Method to fit the observable functions"""
+        raise NotImplementedError
+        
+    
     @abc.abstractmethod
     def forward(self, X):
         """Method to lift state X to observables f(X)"""

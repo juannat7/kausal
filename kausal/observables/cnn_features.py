@@ -126,6 +126,8 @@ class CNNFeatures(BaseObservables):
         if x is None or y is None:
             raise ValueError("Input and target data (x, y) must be provided.")
 
+        x, y = self._transform(x), self._transform(y)
+
         # Setup dataloader
         dataset = TensorDataset(x, y)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
@@ -160,3 +162,8 @@ class CNNFeatures(BaseObservables):
             losses.append(epoch_loss / len(dataloader))
 
         return losses
+
+    def _transform(self, x):
+        """Assumes input of shape (C, H, W, T), transform to Conv2d-like input of shape (T, H, W, C)."""
+        return x.permute(3, 0, 1, 2)
+        

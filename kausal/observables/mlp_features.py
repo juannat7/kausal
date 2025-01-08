@@ -114,8 +114,8 @@ class MLPFeatures(BaseObservables):
         Train/fit model.
 
         Parameters:
-            x (torch.Tensor): Input data.
-            y (torch.Tensor): Target data.
+            x (torch.Tensor): Input data, shape (C, T).
+            y (torch.Tensor): Target data, shape (C, T).
             epochs (int): Number of training epochs.
             lr (float): Learning rate.
             batch_size (int): Number of batch sizes.
@@ -125,6 +125,8 @@ class MLPFeatures(BaseObservables):
         """
         if x is None or y is None:
             raise ValueError("Input and target data (x, y) must be provided.")
+
+        x, y = self._transform(x), self._transform(y)
 
         # Setup dataloader
         dataset = TensorDataset(x, y)
@@ -160,3 +162,8 @@ class MLPFeatures(BaseObservables):
             losses.append(epoch_loss / len(dataloader))
 
         return losses
+
+    def _transform(self, x):
+        """Assumes input of shape (C, T), transform to MLP-like input of shape (T, C)."""
+        return x.permute(1, 0)
+        
