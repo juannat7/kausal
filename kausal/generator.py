@@ -93,3 +93,28 @@ def reaction_diffusion_2d(t, state, args):
     dv_dt = D_v * laplacian_v + f_v
 
     return torch.cat([du_dt.ravel(), dv_dt.ravel()])
+
+
+def enso(t, state, args):
+    """
+    El-Nino Southern Oscillation (ENSO), recharge oscillators.
+    Reference: 
+        [1] https://www.aoml.noaa.gov/phod/docs/2004_Wang_Picaut.pdf
+        [2] https://journals.ametsoc.org/view/journals/atsc/54/7/1520-0469_1997_054_0811_aeorpf_2.0.co_2.xml
+
+    Parameters:
+        t: time.
+        state: system states.
+        args: scalar parameters.
+
+    Returns:
+        tendency: system state tendencies.
+    """
+    T, h = state
+    r, alpha, b0, c, gamma, mu = args
+
+    # Define the equations
+    dT = -r * T - mu * alpha * b0 * h
+    dh = gamma * T + (gamma * mu * b0 - c) * h
+
+    return torch.tensor([dT, dh])

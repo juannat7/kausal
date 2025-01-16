@@ -7,6 +7,9 @@ from .observables import RandomFourierFeatures
 from .regressors import PINV, DMD
 from .utils import validate
 
+from scipy import stats
+from tqdm import tqdm
+
 class Kausal(abc.ABC):
     """
     Causal inference with deep Koopman operator.
@@ -86,7 +89,7 @@ class Kausal(abc.ABC):
             time_shift (int: 1): Time shifts.
     
         Returns:
-            causal_error: Causal error in the cause --> effect variables.
+            causal_error (torch.Tensor): Causal error in the cause --> effect variables.
         """
         
         # Step 1: Observable transforms 
@@ -103,8 +106,37 @@ class Kausal(abc.ABC):
         wm = self._koopman_step(Km, torch.cat([wE, pE], axis=0))
         wj = self._koopman_step(Kj, torch.cat([wE, pEC], axis=0))
         
-        # Step 3: Compute errors (marginal - joint)
+        # Step 4: Compute errors (marginal - joint)
         return F.mse_loss(wm, wEt) - F.mse_loss(wj, wEt)
+
+    def evaluate_multistep(
+        self, 
+        time_shifts = [],
+        **kwargs
+    ):
+        """
+        Evaluate causal strength through marginal/joint difference formulation in the observable space.
+        It inherits the self.evaluate() method, but performed over multiple `time_shifts`.
+    
+        Parameters:
+            time_shifts (List[int]: []): List of time shifts.
+    
+        Returns:
+            causal_errors (torch.Tensor): Causal errors in the cause --> effect variables.
+        """
+        assert len(time_shifts) > 0, "The length of time shifts have to be greater than 0!"
+
+        causal_errors = list()
+
+        # Evaluate across time shifts
+        for t in tqdm(time_shifts):
+
+            with torch.no_grad():
+                error = self.evaluate(time_shift = t)
+                causal_errors.append(error)
+
+        causal_errors = torch.tensor(causal_errors)
+        return causal_errors
             
 
     def forecast(
@@ -198,7 +230,10 @@ class Kausal(abc.ABC):
         )
     
     
-    def _estimate_koopman(self, wE, wEt, pE, pEC):
+    def _estimate_koopman(
+        self, 
+        wE, wEt, pE, pEC
+    ):
         """Compute approximation to Koopman operators with regression algorithm (e.g., DMD)."""
         Km = self.regressor(torch.cat([wE, pE], axis=0), wEt)
         Kj = self.regressor(torch.cat([wE, pEC], axis=0), wEt)
@@ -222,5 +257,4 @@ class Kausal(abc.ABC):
         """Evaluate the application of learned K on w, i.e., wt = K[w]."""
         return K @ w
 
-
-        
+    

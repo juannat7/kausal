@@ -14,5 +14,6 @@ except DistributionNotFound:
 __all__ = [
     "observables",
     "regressors",
+    "stats",
     "Kausal"
 ]
