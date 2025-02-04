@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from .observables import RandomFourierFeatures
+from .observables import RandomFourierFeatures, IdentityFeatures
 from .regressors import PINV, DMD
 from .utils import validate
 
@@ -48,6 +48,7 @@ class Kausal(abc.ABC):
         
         *self.C, self.T = effect.shape
         self.device = effect.device
+        self.test_observable = IdentityFeatures()
 
     
     def fit(
@@ -74,6 +75,8 @@ class Kausal(abc.ABC):
         # Fit observables
         marginal_loss = self.marginal_observable.fit(x = effect, y = effect, **kwargs)
         joint_loss = self.joint_observable.fit(x = effect_cause, y = effect, **kwargs)
+
+        # Fit observables
         return marginal_loss, joint_loss
     
     
@@ -108,10 +111,8 @@ class Kausal(abc.ABC):
         wj = self._koopman_step(Kj, torch.cat([wE, pEC], axis=0))
         
         # Step 4: Compute errors (marginal - joint)
-        if init_idx is not -1:
-            return F.mse_loss(wm, wEt, reduction='none') - F.mse_loss(wj, wEt, reduction='none')
-        else:
-            return F.mse_loss(wm, wEt) - F.mse_loss(wj, wEt)
+        reduction = 'mean' if init_idx == -1 else 'none'
+        return F.mse_loss(wm, wEt, reduction=reduction) - F.mse_loss(wj, wEt, reduction=reduction)
 
     def evaluate_multistep(
         self, 
@@ -139,7 +140,7 @@ class Kausal(abc.ABC):
             with torch.no_grad():
                 error = self.evaluate(time_shift = t, init_idx = init_idx)
 
-                if init_idx is not -1:
+                if init_idx != -1:
                     causal_errors.append(error.mean(axis=0)[init_idx])
                 else:
                     causal_errors.append(error)
@@ -187,7 +188,10 @@ class Kausal(abc.ABC):
             wm.append(
                 self._koopman_step(
                     K = Km,
-                    w = torch.cat([wm[-1], self.marginal_observable(self.effect[..., d : d+1])], axis=0)
+                    w = torch.cat([
+                        self.test_observable(wm[-1]), 
+                        self.marginal_observable(self.effect[..., d : d+1])
+                    ], axis=0)
                 )
             )
         
@@ -195,7 +199,10 @@ class Kausal(abc.ABC):
             wj.append(
                 self._koopman_step(
                     K = Kj,
-                    w = torch.cat([wj[-1], self.joint_observable(self.effect_cause[..., d : d+1])], axis=0)
+                    w = torch.cat([
+                        self.test_observable(wj[-1]), 
+                        self.joint_observable(self.effect_cause[..., d : d+1])
+                    ], axis=0)
                 )
             )
                 
@@ -229,8 +236,11 @@ class Kausal(abc.ABC):
         # Generate shifted states
         wE, wEt = self._time_shift(x = effect, time_shift = time_shift)
         wEC, wECt = self._time_shift(x = effect_cause, time_shift = time_shift)
+
+        # Test observables
+        wE, wEt = self.test_observable(wE), self.test_observable(wEt)
     
-        # Compute their transforms, psi
+        # Compute observables, psi
         pE, pEt = self.marginal_observable(wE), self.marginal_observable(wEt) # Marginal transforms
         pEC, pECt = self.joint_observable(wEC), self.joint_observable(wECt)   # Joint transforms
             
