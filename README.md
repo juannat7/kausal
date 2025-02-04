@@ -1,7 +1,7 @@
 Kausal
 =========
 
-🚧 **Kausal** is a Python package to perform causal inference of nonlinear, high-dimensional dynamics using deep Koopman operator.
+🚧 **Kausal** is a Python package to perform causal inference in nonlinear, high-dimensional dynamics using deep Koopman operator-theoretic approach.
 
 # Quickstart Guide
 > __NOTE__: Please refer to our example notebooks (in `examples/`) for demonstration!
@@ -10,11 +10,12 @@ Kausal
 `Kausal` provides an interface to perform causal analysis based on Koopman operator theory, between two set of multivariate timeseries:
 
 ```python
+import torch
 from kausal import koopman
 
 # Define your cause/effect variables
-cause = ...  # Shape (n_features, *, n_timestep)
-effect = ... # Shape (n_features, *, n_timestep)
+cause = torch.tensor(...)  # Shape (n_features, *, n_timestep)
+effect = torch.tensor(...) # Shape (n_features, *, n_timestep)
 
 # Initialize `Kausal` object
 model = koopman.Kausal(
@@ -30,7 +31,6 @@ causal_effect = model.evaluate(
 
 You can also specify specific observable functions, e.g., `MLP` or `CNN`.
 ```python
-from kausal import koopman
 from kausal.observables import MLPFeatures
 
 model = koopman.Kausal(
@@ -43,7 +43,6 @@ model = koopman.Kausal(
 
 Several regression techniques to estimate the Koopman operator is also provided, e.g., pseudo-inverse (`PINV`) or low-rank dynamic mode decomposition (`DMD`).
 ```python
-from kausal import koopman
 from kausal.regressors import DMD
 
 model = koopman.Kausal(

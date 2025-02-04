@@ -111,10 +111,10 @@ def enso(t, state, args):
         tendency: system state tendencies.
     """
     T, h = state
-    r, alpha, b0, c, gamma, mu = args
+    r, alpha, b0, c, gamma, mu, eps = args
 
     # Define the equations
-    dT = -r * T - mu * alpha * b0 * h
+    dT = -r * T - mu * alpha * b0 * h - eps * T ** 3
     dh = gamma * T + (gamma * mu * b0 - c) * h
 
     return torch.tensor([dT, dh])

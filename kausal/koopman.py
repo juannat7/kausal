@@ -80,6 +80,7 @@ class Kausal(abc.ABC):
     def evaluate(
         self, 
         time_shift = 1,
+        init_idx = -1,
         **kwargs
     ):
         """
@@ -107,11 +108,15 @@ class Kausal(abc.ABC):
         wj = self._koopman_step(Kj, torch.cat([wE, pEC], axis=0))
         
         # Step 4: Compute errors (marginal - joint)
-        return F.mse_loss(wm, wEt) - F.mse_loss(wj, wEt)
+        if init_idx is not -1:
+            return F.mse_loss(wm, wEt, reduction='none') - F.mse_loss(wj, wEt, reduction='none')
+        else:
+            return F.mse_loss(wm, wEt) - F.mse_loss(wj, wEt)
 
     def evaluate_multistep(
         self, 
         time_shifts = [],
+        init_idx = -1,
         **kwargs
     ):
         """
@@ -132,9 +137,13 @@ class Kausal(abc.ABC):
         for t in tqdm(time_shifts):
 
             with torch.no_grad():
-                error = self.evaluate(time_shift = t)
-                causal_errors.append(error)
+                error = self.evaluate(time_shift = t, init_idx = init_idx)
 
+                if init_idx is not -1:
+                    causal_errors.append(error.mean(axis=0)[init_idx])
+                else:
+                    causal_errors.append(error)
+                
         causal_errors = torch.tensor(causal_errors)
         return causal_errors
             
