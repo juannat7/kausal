@@ -7,27 +7,20 @@ class PolynomialFeatures(BaseObservables):
     Returns features of polynomials
 
     Parameters:
-        degree (int): 
-        interaction_only (bool):
+        degree (int): the order of maximum power.
 
     Returns
         Identity (torch.Tensor): The Identity transforms.
     """
 
-    def __init__(
-        self,
-        degree = 2
-    ):
+    def __init__(self, degree = 2):
         super().__init__()
         self.degree = degree
 
     def fit(self):
         return self
     
-    def forward(
-        self, 
-        X
-    ):
+    def forward(self, X):
         X = self.validate(X)
         N, D = X.shape
         
