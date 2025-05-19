@@ -4,7 +4,7 @@ Kausal
 🚧 **Kausal** is a Python package to perform causal inference in nonlinear, high-dimensional dynamics using deep Koopman operator-theoretic approach.
 
 # Installation
-> __NOTE__: Since the package is still under review and in active development, we recommend cloning the repository for an early view and usafe. Future work will provide an easy installation through `PyPi` hosting, for example.
+> __NOTE__: Since the package is still under review and in active development, we recommend cloning the repository for an early view. Published work will provide an easy installation through `PyPi` hosting, for example.
 
 ```
 git clone https://github.com/juannat7/kausal.git
