@@ -15,5 +15,6 @@ __all__ = [
     "observables",
     "regressors",
     "stats",
+    "baselines",
     "Kausal"
 ]
