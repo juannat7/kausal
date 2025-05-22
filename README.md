@@ -58,4 +58,20 @@ model = koopman.Kausal(
     effect = ...
 )
 ```
+# Citation
+If you find any of the code and dataset useful, feel free to acknowledge our work through:
 
+```bibtex
+@article{nathaniel2025deepkoopmanoperatorframework,
+  title={Deep Koopman operator framework for causal discovery in nonlinear dynamical systems},
+  author={Juan Nathaniel and Carla Roesch and Jatan Buch and Derek DeSantis and Adam Rupe and Kara Lamb and Pierre Gentine},
+  journal={arXiv preprint arXiv:2505.14828},
+  year={2025}
+}
+
+@article{rupe2024causal,
+  title={Causal Discovery in Nonlinear Dynamical Systems using Koopman Operators},
+  author={Rupe, Adam and DeSantis, Derek and Bakker, Craig and Kooloth, Parvathi and Lu, Jian},
+  journal={arXiv preprint arXiv:2410.10103},
+  year={2024}
+}
