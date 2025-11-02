@@ -20,7 +20,12 @@ class BaseObservables(nn.Module):
 
     
     @abc.abstractmethod
-    def fit(self):
+    def fit(
+        self, 
+        x=None, 
+        y=None, 
+        **kwargs
+    ):
         """Method to fit the observable functions"""
         raise NotImplementedError
         

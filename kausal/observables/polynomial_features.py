@@ -17,7 +17,7 @@ class PolynomialFeatures(BaseObservables):
         super().__init__()
         self.degree = degree
 
-    def fit(self):
+    def fit(self, x = None, y = None, **kwargs):
         return self
     
     def forward(self, X):

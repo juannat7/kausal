@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
 from .base import BaseObservables
 
@@ -108,7 +107,8 @@ class CNNFeatures(BaseObservables):
         y = None,
         epochs = 1000,
         lr = 1e-3,
-        batch_size = 32
+        batch_size = 32,
+        **kwargs
     ):
         """
         Train/fit model.
@@ -138,7 +138,7 @@ class CNNFeatures(BaseObservables):
 
         # Training loop
         losses = []
-        for epoch in tqdm(range(epochs)):
+        for epoch in range(epochs):
             self.train()
             epoch_loss = 0
     

@@ -1,9 +1,7 @@
-Kausal
+Kausal: Deep Koopman Operators for Causal Discovery
 =========
 
-
-
-🚧 **Kausal** is a Python package to perform causal inference in nonlinear, high-dimensional dynamics using deep Koopman operator-theoretic approach.
+**Kausal** is a PyTorch package to perform causal inference in nonlinear, high-dimensional dynamics using deep Koopman operator-theoretic approach.
 
 <div align="center">
   <a href="https://arxiv.org/abs/2505.14828"><img src="https://img.shields.io/badge/ArXiV-2505.14828-b31b1b.svg" alt="arXiv"/></a>
@@ -12,64 +10,47 @@ Kausal
 
 ![Overview of Kausal](docs/schematic-algorithm.png)
 
+# Features
+- 🌡️ Causal measures between high-dimensional, multi-scale, nonlinear timeseries
+- ⌛ Uncertainty quantification of causal measures
+- 🌐 Causal graph discovery
+
+
 # Abstract
-We use a deep Koopman operator-theoretic formalism to develop a novel causal discovery algorithm, Kausal. Causal discovery aims to identify cause-effect mechanisms for better scientific understanding, explainable decision-making, and more accurate modeling. Standard statistical frameworks, such as Granger causality, lack the ability to quantify causal relationships in nonlinear dynamics due to the presence of complex feedback mechanisms, timescale mixing, and nonstationarity. This presents a challenge in studying many real-world systems, such as the Earth's climate. Meanwhile, Koopman operator methods have emerged as a promising tool for approximating nonlinear dynamics in a linear space of observables. In Kausal, we propose to leverage this powerful idea for causal analysis where optimal observables are inferred using deep learning. Causal estimates are then evaluated in a reproducing kernel Hilbert space, and defined as the distance between the marginal dynamics of the effect and the joint dynamics of the cause-effect observables. Our numerical experiments demonstrate Kausal's superior ability in discovering and characterizing causal signals compared to existing approaches of prescribed observables. Lastly, we extend our analysis to observations of El Niño-Southern Oscillation highlighting our algorithm's applicability to real-world phenomena. 
+Causal discovery aims to identify cause-effect mechanisms for better scientific understanding, explainable decision-making, and more accurate modeling. Standard statistical frameworks, such as Granger causality, lack the ability to quantify causal relationships in nonlinear dynamics due to the presence of complex feedback mechanisms, timescale mixing, and nonstationarity. Thus, applying these methods to study causal dynamics in real-world systems, such as the Earth, is a major challenge. Addressing this shortcoming, we leverage deep learning and a **K**oopman operator-theoretic formalism to present a new class of c**ausal** discovery algorithms. **Kausal** uses deep Koopman operator methods to approximate nonlinear dynamics in a linearized vector space in which traditional causal inference methods such as Granger causality can be more easily applied. Our idealized experiments demonstrate **Kausal**'s superior ability in discovering and characterizing causal signals compared to existing deep learning and non-deep learning state-of-the-art approaches. Finally, the successful identification of major El Niño and La Niña events in observations showcases **Kausal**'s skill to handle real-world applications.
 
 # Installation
-> __NOTE__: Since the package is still under review and in active development, we recommend cloning the repository for an early view. Published work will provide an easy installation through `PyPi` hosting, for example.
+
+Kausal is available on PyPi, so installation is as easy as:
 
 ```
-git clone https://github.com/juannat7/kausal.git
+pip install kausal
+```
+
+If you use conda, please use the following commands:
+```
+conda create --name venv python=3.10
+conda activate venv
+pip install kausal
 ```
 
 # Quickstart Guide
-> __NOTE__: Please refer to our example notebooks (in `examples/`) for demonstration!
 
+Please refer to our tutorial notebooks in the `tutorial/` folder for demonstration.
 
-`Kausal` provides an interface to perform causal analysis based on Koopman operator theory, between two set of multivariate timeseries:
+# Experimental Results
+You can find accompanying code to reproduce the experimental results in the `experiments/` folder.
 
-```python
-import torch
-from kausal import koopman
+# Developer's Guide
+We welcome and appreciate any contribution to improve the codebase! You can make a Pull Request or raise an Issue. During development, install the package in the editable format:
 
-# Define your cause/effect variables
-cause = torch.tensor(...)  # Shape (n_features, *, n_timestep)
-effect = torch.tensor(...) # Shape (n_features, *, n_timestep)
+```
+git clone https://github.com/juannat7/kausal.git
+cd kausal/
+pip install -e .
 
-# Initialize `Kausal` object
-model = koopman.Kausal(
-    cause = cause,
-    effect = effect
-)
-
-# Estimate causal effect
-causal_effect = model.evaluate(
-    time_shift = 1
-)
 ```
 
-You can also specify specific observable functions, e.g., `MLP` or `CNN`.
-```python
-from kausal.observables import MLPFeatures
-
-model = koopman.Kausal(
-    marginal_observable = MLPFeatures(...),
-    joint_observable = MLPFeatures(...),
-    cause = ...,
-    effect = ...
-)
-```
-
-Several regression techniques to estimate the Koopman operator is also provided, e.g., pseudo-inverse (`PINV`) or low-rank dynamic mode decomposition (`DMD`).
-```python
-from kausal.regressors import DMD
-
-model = koopman.Kausal(
-    regressor = DMD(svd_rank = 4),
-    cause = ...,
-    effect = ...
-)
-```
 # Citation
 If you find any of the code and dataset useful, feel free to acknowledge our work through:
 

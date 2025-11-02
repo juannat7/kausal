@@ -15,7 +15,7 @@ class IdentityFeatures(BaseObservables):
     def __init__(self):
         super().__init__()
 
-    def fit(self):
+    def fit(self, x = None, y = None, **kwargs):
         return self
     
     def forward(

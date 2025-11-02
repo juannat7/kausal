@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from .observables import RandomFourierFeatures, IdentityFeatures
 from .regressors import PINV, DMD
 from .utils import validate
+from .stats import bootstrap_testing
 
 from scipy import stats
 from tqdm import tqdm
@@ -53,14 +54,12 @@ class Kausal(abc.ABC):
     
     def fit(
         self, 
-        n_train = None,
         **kwargs
     ):
         """
         Fit the observable functions, if needed, such as when using deep learning approximation.
 
         Parameters:
-            n_train (NoneType, int): The number of first n samples used for training the observable functions.
             transform_func (NoneType, Callable): The transform function to preprocess training data.
 
         Returns:
@@ -68,6 +67,7 @@ class Kausal(abc.ABC):
             joint_loss (torch.Tensor): The joint observable loss over n_epochs.
         """
         # Prepare dataset
+        n_train = kwargs.get('n_train', None)
         cause = self.cause[..., :n_train] if n_train is not None else self.cause
         effect = self.effect[..., :n_train] if n_train is not None else self.effect
         effect_cause = torch.cat([effect, cause], axis=0)
@@ -76,14 +76,16 @@ class Kausal(abc.ABC):
         marginal_loss = self.marginal_observable.fit(x = effect, y = effect, **kwargs)
         joint_loss = self.joint_observable.fit(x = effect_cause, y = effect, **kwargs)
 
-        # Fit observables
         return marginal_loss, joint_loss
+
     
-    
+    @torch.inference_mode()
     def evaluate(
         self, 
         time_shift = 1,
-        init_idx = -1,
+        init_idx = None,
+        bootstrap_ratio = 0.9,
+        bootstrap_nums = 100,
         **kwargs
     ):
         """
@@ -91,11 +93,13 @@ class Kausal(abc.ABC):
     
         Parameters:
             time_shift (int: 1): Time shifts.
+            bootstrap_ratio (float: 0.9): Ratio of trajectory length used for bootstrapping.
+            boostrap_nums (int: 100): Number of bootstrap resampling.
+            
     
         Returns:
             causal_error (torch.Tensor): Causal error in the cause --> effect variables.
         """
-        
         # Step 1: Observable transforms 
         wE, wEt, pE, pEC = self._transform_state(
             cause = self.cause, 
@@ -105,50 +109,82 @@ class Kausal(abc.ABC):
             
         # Step 2: Approximate Koopman operator
         Km, Kj = self._estimate_koopman(wE, wEt, pE, pEC)
+        self.Km, self.Kj = Km, Kj
     
-        # Step 3: Evaluate marginal / joint models
-        wm = self._koopman_step(Km, torch.cat([wE, pE], axis=0))
-        wj = self._koopman_step(Kj, torch.cat([wE, pEC], axis=0))
+        # Step 3: Evaluate marginal / joint models and compute their residuals
+        # Also get confidence band of the causal measures by bootstrap sampling
+        cause_meas = list()
         
-        # Step 4: Compute errors (marginal - joint)
-        reduction = 'mean' if init_idx == -1 else 'none'
-        return F.mse_loss(wm, wEt, reduction=reduction) - F.mse_loss(wj, wEt, reduction=reduction)
+        trajec_len = wE.shape[-1]
+        bstrap_len = max(1, int(trajec_len * bootstrap_ratio))
+        
+        for _ in range(bootstrap_nums):
+            start = torch.randint(0, trajec_len - bstrap_len + 1, (1,)).item()
+            end = start + bstrap_len
 
+            wm = self._koopman_step(Km, torch.cat([wE[..., start:end], pE[..., start:end]], axis=0))
+            wj = self._koopman_step(Kj, torch.cat([wE[..., start:end], pEC[..., start:end]], axis=0))
+
+            if init_idx == None:
+                error = F.mse_loss(wm, wEt[..., start:end], reduction='mean') - F.mse_loss(wj, wEt[..., start:end], reduction='mean')
+                cause_meas.append(error)
+
+            # Return sliced error if given initial index, useful for rolling window analysis
+            else:
+                error = F.mse_loss(wm, wEt[..., start:end], reduction='none') - F.mse_loss(wj, wEt[..., start:end], reduction='none')
+                error = error.mean(axis=0)[init_idx]
+                cause_meas.append(error)
+            
+        cause_meas = torch.stack(cause_meas)
+        
+        # Step 4: Perform hypothesis test on the bootstrap samples
+        p_val = bootstrap_testing(samples=cause_meas)
+        return cause_meas, p_val
+            
+        
+    
+    @torch.inference_mode()
     def evaluate_multistep(
         self, 
         time_shifts = [],
-        init_idx = -1,
+        init_idx = None,
+        bootstrap_ratio = 0.9,
+        bootstrap_nums = 100,
         **kwargs
     ):
         """
         Evaluate causal strength through marginal/joint difference formulation in the observable space.
-        It inherits the self.evaluate() method, but performed over multiple `time_shifts`.
+        It performs the self.evaluate() method under the hood, but performed over multiple `time_shifts`.
     
         Parameters:
             time_shifts (List[int]: []): List of time shifts.
+            bootstrap_ratio (float: 0.9): Ratio of trajectory length used for bootstrapping.
+            boostrap_nums (int: 100): Number of bootstrap resampling.
     
         Returns:
             causal_errors (torch.Tensor): Causal errors in the cause --> effect variables.
         """
         assert len(time_shifts) > 0, "The length of time shifts have to be greater than 0!"
 
-        causal_errors = list()
+        causal_errors, p_vals = list(), list()
 
         # Evaluate across time shifts
         for t in tqdm(time_shifts):
 
-            with torch.no_grad():
-                error = self.evaluate(time_shift = t, init_idx = init_idx)
-
-                if init_idx != -1:
-                    causal_errors.append(error.mean(axis=0)[init_idx])
-                else:
-                    causal_errors.append(error)
-                
-        causal_errors = torch.tensor(causal_errors)
-        return causal_errors
+            error, p_val = self.evaluate(
+                time_shift = t, 
+                init_idx = init_idx,
+                bootstrap_ratio = bootstrap_ratio,
+                bootstrap_nums = bootstrap_nums
+            )
             
-
+            causal_errors.append(error)
+            p_vals.append(p_val)
+        
+        return torch.stack(causal_errors, dim=0), torch.stack(p_vals, dim=0)
+        
+    
+    @torch.inference_mode()
     def forecast(
         self, 
         n_train = None,

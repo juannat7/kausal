@@ -17,7 +17,7 @@ class TimeDelayFeatures(BaseObservables):
         super().__init__()
         self.n_delays = n_delays
 
-    def fit(self):
+    def fit(self, x = None, y = None, **kwargs):
         return self
     
     def forward(self, X):

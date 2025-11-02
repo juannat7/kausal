@@ -28,33 +28,7 @@ def coupled_rossler(t, state, args):
     dz2 = b + z2 * (x2 - d)
 
     return torch.tensor([dx1, dy1, dz1, dx2, dy2, dz2])
-
-
-def lorenz96(t, state, args):
-    """
-    Lorenz '96 model dynamics.
-
-    Parameters:
-        t: time.
-        state: system states.
-        args: scalar parameters, including forcing term F.
-
-    Returns:
-        tendency: system state tendencies.
-    """
-    F = args[0]  # Forcing term
-    N = state.shape[0]  # Number of variables
-
-    # Compute the derivatives with periodic boundary conditions
-    indices = torch.arange(N)
-    dxdt = (
-        (state[(indices + 1) % N] - state[(indices - 2) % N])
-        * state[(indices - 1) % N]
-        - state
-        + F
-    )
-    return dxdt
-
+    
 
 def reaction_diffusion_2d(t, state, args):
     """
