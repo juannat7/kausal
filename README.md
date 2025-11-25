@@ -44,12 +44,12 @@ Causal discovery aims to identify cause-effect mechanisms for better scientific 
 
 Kausal is available on PyPi, so installation is as easy as:
 
-```
+```bash
 pip install kausal
 ```
 
 If you use conda, please use the following commands:
-```
+```bash
 conda create --name venv python=3.10
 conda activate venv
 pip install kausal
@@ -61,7 +61,7 @@ Please refer to our tutorial notebooks in the `tutorial/` folder for full demons
 
 ## Causal estimation
 The most basic functionality is to perform causal estimation useful for e.g., event detection, relative strength measurements between variables.
-```
+```python
 import torch
 from kausal.koopman import Kausal
 
@@ -82,7 +82,7 @@ causal_effect, p_values = causal_koopman.evaluate(
 
 ## Causal emulation
 Once you fit your Koopman operators under some time shift, you can perform rollouts.
-```
+```python
 import torch
 from kausal.koopman import Kausal
 
@@ -103,7 +103,7 @@ x_forecast_marginal, x_forecast_joint = causal_koopman.forecast(
 ## Causal graph discovery
 U;timately, we can iterate through pairwise combination of variables to deduce their overall causal structures. 
 
-```
+```python
 import torch
 from kausal import Graph
 
@@ -128,7 +128,7 @@ graph_model.print_result()  # Print out p_values, causal measures and its uncert
 # Advanced Guides
 ## Using deep learning
 You can use deep learning-based features for the observables.
-```
+```python
 import torch
 from kausal.koopman import Kausal
 from kausal.observables import MLPFeatures
@@ -159,7 +159,7 @@ causal_effect, p_values = causal_koopman.evaluate(time_shift=1)
 ## Using low-rank
 Low-rank estimators are also available e.g., through SVD.
 
-```
+```python
 import torch
 from kausal.koopman import Kausal
 from kausal.regressors import DMD
@@ -178,7 +178,7 @@ You can find accompanying code to reproduce the experimental results in the `exp
 # Developer's Guide
 We welcome and appreciate any contribution to improve the codebase! You can make a Pull Request or raise an Issue. During development, install the package in the editable format:
 
-```
+```bash
 git clone https://github.com/juannat7/kausal.git
 cd kausal/
 pip install -e .
