@@ -25,8 +25,6 @@ Kausal: Deep Koopman Operators for Causal Discovery
 </div>
 <br/>
 
-![Overview of Kausal](docs/schematic-algorithm.png)
-
 # Features
 - 🌡️ [Causal measures with uncertainty quantification](#Causal-estimation)
 - ⌛ [Causal emulation](#Causal-emulation)
@@ -37,7 +35,10 @@ Additional features include:
 - 📶 [Low rank decomposition](#Using-low-rank)
 
 
+
 # Abstract
+
+![Overview of Kausal](docs/schematic-algorithm.png)
 Causal discovery aims to identify cause-effect mechanisms for better scientific understanding, explainable decision-making, and more accurate modeling. Standard statistical frameworks, such as Granger causality, lack the ability to quantify causal relationships in nonlinear dynamics due to the presence of complex feedback mechanisms, timescale mixing, and nonstationarity. Thus, applying these methods to study causal dynamics in real-world systems, such as the Earth, is a major challenge. Addressing this shortcoming, we leverage deep learning and a **K**oopman operator-theoretic formalism to present a new class of c**ausal** discovery algorithms. **Kausal** uses deep Koopman operator methods to approximate nonlinear dynamics in a linearized vector space in which traditional causal inference methods such as Granger causality can be more easily applied. Our idealized experiments demonstrate **Kausal**'s superior ability in discovering and characterizing causal signals compared to existing deep learning and non-deep learning state-of-the-art approaches. Finally, the successful identification of major El Niño and La Niña events in observations showcases **Kausal**'s skill to handle real-world applications.
 
 # Installation
