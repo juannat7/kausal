@@ -77,7 +77,7 @@ causal_koopman = Kausal(cause = x_cause, effect = x_effect)
 causal_effect, p_values = causal_koopman.evaluate(
     time_shift=1, 
     bootstrap_ratio=0.9, ## Subtrajectory length for uncertainty quantification
-    bootstrap_nums=100   ## Number of resampling for uncertainty quantification)
+    bootstrap_nums=100   ## Number of resampling for uncertainty quantification
 )
 ```
 
@@ -102,7 +102,7 @@ x_forecast_marginal, x_forecast_joint = causal_koopman.forecast(
 ```
 
 ## Causal graph discovery
-U;timately, we can iterate through pairwise combination of variables to deduce their overall causal structures. 
+Ultimately, we can iterate through pairwise combination of variables to deduce their overall causal structures. 
 
 ```python
 import torch
