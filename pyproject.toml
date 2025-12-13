@@ -47,7 +47,7 @@ classifiers = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-packages = ["kausal*"]
+include = ["kausal*"]
 
 [project.urls]
 Homepage = "https://github.com/juannat7/kausal"
