@@ -41,8 +41,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-[tool.setuptools]
-packages = ["kausal"]
+[tool.setuptools.packages.find]
+where = ["."]
+packages = ["kausal*"]
 
 [project.urls]
 Homepage = "https://github.com/juannat7/kausal"
