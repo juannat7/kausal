@@ -20,7 +20,11 @@ Kausal: Deep Koopman Operators for Causal Discovery
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"/>
   </a>
 
-  <img src="https://img.shields.io/pypi/dm/kausal"/>
+  <!-- Downloads -->
+  <a href="https://pepy.tech/projects/kausal">
+    <img src="https://static.pepy.tech/personalized-badge/kausal?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=Downloads"
+         alt="PyPI Downloads"/>
+  </a>
 
 </div>
 <br/>
